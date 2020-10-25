@@ -3824,6 +3824,8 @@ events.once = once_1;
 class Transport {
   constructor() {
     this.exchangeTimeout = 30000;
+    this.unresponsiveTimeout = 15000;
+    this.deviceModel = null;
     this._events = new events();
 
     this.send = async (cla, ins, p1, p2, data = Buffer.alloc(0), statusList = [StatusCodes.OK]) => {
@@ -3845,7 +3847,7 @@ class Transport {
 
     this.exchangeAtomicImpl = async f => {
       if (this.exchangeBusyPromise) {
-        throw new TransportError("Transport race condition", "RaceCondition");
+        throw new TransportRaceCondition("An action was already pending on the Ledger device. Please deny or reconnect.");
       }
 
       let resolveBusy;
@@ -3853,11 +3855,22 @@ class Transport {
         resolveBusy = r;
       });
       this.exchangeBusyPromise = busyPromise;
+      let unresponsiveReached = false;
+      const timeout = setTimeout(() => {
+        unresponsiveReached = true;
+        this.emit("unresponsive");
+      }, this.unresponsiveTimeout);
 
       try {
         const res = await f();
+
+        if (unresponsiveReached) {
+          this.emit("responsive");
+        }
+
         return res;
       } finally {
+        clearTimeout(timeout);
         if (resolveBusy) resolveBusy();
         this.exchangeBusyPromise = null;
       }
@@ -3929,6 +3942,14 @@ class Transport {
 
   setExchangeTimeout(exchangeTimeout) {
     this.exchangeTimeout = exchangeTimeout;
+  }
+  /**
+   * Define the delay before emitting "unresponsive" on an exchange that does not respond
+   */
+
+
+  setExchangeUnresponsiveTimeout(unresponsiveTimeout) {
+    this.unresponsiveTimeout = unresponsiveTimeout;
   }
   /**
    * wrapper on top of exchange to simplify work of the implementation.

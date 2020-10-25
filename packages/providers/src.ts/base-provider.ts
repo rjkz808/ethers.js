@@ -741,7 +741,7 @@ export class BaseProvider extends Provider implements EnsProvider {
     // Deprecated; do not use this
     resetEventsBlock(blockNumber: number): void {
         this._lastBlockNumber = blockNumber - 1;
-        if (this.polling) { this.poll(); }
+        if (this.polling) { this.poll().catch(console.error); }
     }
 
     get network(): Network {
@@ -815,18 +815,18 @@ export class BaseProvider extends Provider implements EnsProvider {
 
     set polling(value: boolean) {
         if (value && !this._poller) {
-            this._poller = setInterval(this.poll.bind(this), this.pollingInterval);
+            this._poller = setInterval(() => this.poll().catch(console.error), this.pollingInterval);
 
             if (!this._bootstrapPoll) {
                 this._bootstrapPoll = setTimeout(() => {
-                    this.poll();
+                    this.poll().catch(console.error);
 
                     // We block additional polls until the polling interval
                     // is done, to prevent overwhelming the poll function
                     this._bootstrapPoll = setTimeout(() => {
                         // If polling was disabled, something may require a poke
                         // since starting the bootstrap poll and it was disabled
-                        if (!this._poller) { this.poll(); }
+                        if (!this._poller) { this.poll().catch(console.error); }
 
                         // Clear out the bootstrap so we can do another
                         this._bootstrapPoll = null;
@@ -853,7 +853,7 @@ export class BaseProvider extends Provider implements EnsProvider {
 
         if (this._poller) {
             clearInterval(this._poller);
-            this._poller = setInterval(() => { this.poll() }, this._pollingInterval);
+            this._poller = setInterval(() => { this.poll().catch(console.error) }, this._pollingInterval);
         }
     }
 

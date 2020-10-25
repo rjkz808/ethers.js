@@ -720,7 +720,7 @@ var BaseProvider = /** @class */ (function (_super) {
     BaseProvider.prototype.resetEventsBlock = function (blockNumber) {
         this._lastBlockNumber = blockNumber - 1;
         if (this.polling) {
-            this.poll();
+            this.poll().catch(console.error);
         }
     };
     Object.defineProperty(BaseProvider.prototype, "network", {
@@ -802,17 +802,17 @@ var BaseProvider = /** @class */ (function (_super) {
         set: function (value) {
             var _this = this;
             if (value && !this._poller) {
-                this._poller = setInterval(this.poll.bind(this), this.pollingInterval);
+                this._poller = setInterval(function () { return _this.poll().catch(console.error); }, this.pollingInterval);
                 if (!this._bootstrapPoll) {
                     this._bootstrapPoll = setTimeout(function () {
-                        _this.poll();
+                        _this.poll().catch(console.error);
                         // We block additional polls until the polling interval
                         // is done, to prevent overwhelming the poll function
                         _this._bootstrapPoll = setTimeout(function () {
                             // If polling was disabled, something may require a poke
                             // since starting the bootstrap poll and it was disabled
                             if (!_this._poller) {
-                                _this.poll();
+                                _this.poll().catch(console.error);
                             }
                             // Clear out the bootstrap so we can do another
                             _this._bootstrapPoll = null;
@@ -840,7 +840,7 @@ var BaseProvider = /** @class */ (function (_super) {
             this._pollingInterval = value;
             if (this._poller) {
                 clearInterval(this._poller);
-                this._poller = setInterval(function () { _this.poll(); }, this._pollingInterval);
+                this._poller = setInterval(function () { _this.poll().catch(console.error); }, this._pollingInterval);
             }
         },
         enumerable: true,
